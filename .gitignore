@@ -1,0 +1,20 @@
+# Generado por tools/build.py
+dist/
+src/Script.html
+src/Estilos.html
+src/SemillaRubrica.gs
+# Datos y secretos: nunca al repositorio
+.env
+.env.*
+!.env.example
+datos/
+datos-*/
+respaldos/
+importar/
+padron/
+paquete/
+# Pruebas
+test/salida/
+servidor/test/salida/
+node_modules/
+*.zip

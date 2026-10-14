@@ -1,0 +1,32 @@
+QUIERO SER INGENIERO - VERSION 1.7 PARA GOOGLE APPS SCRIPT
+==========================================================
+
+Esta carpeta actualiza la version 1 (la que funciona hoy en Google) para preparar el paso a la
+version 2 en servidor propio. Para los estudiantes solo aparece un boton nuevo.
+
+NOVEDADES 1.7
+  - Mi configuracion > Mi expediente > "Descargar mi expediente": archivo .json firmado con todo el
+    trabajo del estudiante (plan, biblioteca, borrador, figuras, aprobaciones). Tambien queda una
+    copia en Drive con enlace, por si Google Sites bloquea la descarga directa.
+  - exportarTodo(): la migracion completa. Se ejecuta UNA vez desde el editor (solo el propietario).
+    Deja en la carpeta de la aplicacion en Drive un .zip con todas las pestanas, las figuras y el
+    secreto de firma. El enlace aparece en el registro de ejecucion.
+  - Modo solo lectura para despues del traslado. En la pestana Config:
+        SOLO_LECTURA    = SI
+        NUEVA_DIRECCION = https://(dominio de la version 2)
+    Se puede consultar y descargar el expediente; nada se modifica y se anuncia la nueva direccion.
+  - Correccion: los iconos dentro de un texto (por ejemplo, el de ecuaciones en el aviso del Word
+    del borrador) ya no se ven gigantes.
+
+COMO ACTUALIZAR (igual que siempre)
+  1. Abra el proyecto de Apps Script.
+  2. Reemplace todo el contenido de Codigo.gs, Script.html y Estilos.html por los de esta carpeta
+     (Index.html y appsscript.json no cambian).
+  3. Guarde (Ctrl+S).
+  4. Implementar > Gestionar implementaciones > lapiz > Version: Nueva version > Implementar.
+     La URL /exec no cambia.
+  5. Ejecute una vez la funcion instalar() desde el editor para que agregue SOLO_LECTURA y
+     NUEVA_DIRECCION a la pestana Config (no borra nada), o agregue esas dos filas a mano.
+
+EL DIA DEL TRASLADO
+  Ver docs/MIGRACION.md en el paquete de la version 2.

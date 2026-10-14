@@ -1,0 +1,56 @@
+# ¡Quiero ser Ingeniero! - versión 2
+#   app           producción   (datos en ./datos)
+#   app-pruebas   pruebas      (datos en ./datos-pruebas; solo se levanta con el perfil «pruebas»)
+#   caddy         HTTPS automático (Let's Encrypt) delante de ambas
+#
+# Las imágenes qsi:produccion y qsi:pruebas las construye despliegue/scripts/desplegar.sh.
+name: qsi
+
+x-app: &app
+  restart: unless-stopped
+  # Mismo usuario que el de despliegue: así los datos y respaldos son suyos (lo fija instalar-servidor.sh)
+  user: "${UID_APP:-1000}:${GID_APP:-1000}"
+  env_file: .env
+  mem_limit: 2g
+  logging:
+    driver: json-file
+    options: { max-size: "20m", max-file: "5" }
+
+services:
+  app:
+    <<: *app
+    image: qsi:produccion
+    environment:
+      DATOS: /datos
+      URL_PUBLICA: https://${DOMINIO}
+    volumes:
+      - ./datos:/datos
+
+  app-pruebas:
+    <<: *app
+    image: qsi:pruebas
+    profiles: ["pruebas"]
+    environment:
+      DATOS: /datos
+      URL_PUBLICA: https://${DOMINIO_PRUEBAS:-pruebas.localhost}
+      TRABAJADORES: "2"
+    volumes:
+      - ./datos-pruebas:/datos
+
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    depends_on: [app]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    env_file: .env
+    volumes:
+      - ./despliegue/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_datos:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_datos:
+  caddy_config:

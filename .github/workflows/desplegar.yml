@@ -1,0 +1,55 @@
+# Despliegue:
+#   - Cada cambio en main que pasa las pruebas se publica solo en PRUEBAS (pruebas.<dominio>).
+#   - PRODUCCIÓN se publica a mano: Actions > Desplegar > Run workflow > destino: produccion.
+#     El entorno «produccion» de GitHub puede exigir la aprobación de José o Ricardo antes de continuar.
+#
+# Secretos del repositorio (Settings > Secrets and variables > Actions):
+#   SSH_HOST         IP o nombre del servidor
+#   SSH_USUARIO      usuario de despliegue (el que ejecutó instalar-servidor.sh)
+#   SSH_CLAVE        clave privada SSH (ed25519) de ese usuario, solo para despliegues
+#   SSH_HOSTS        línea de known_hosts del servidor:  ssh-keyscan -p 22 <ip>
+#   SSH_PUERTO       (opcional) puerto SSH, 22 por defecto
+name: Desplegar
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      destino:
+        description: '¿Dónde publicar?'
+        type: choice
+        options: [pruebas, produccion]
+        default: pruebas
+      ref:
+        description: 'Rama, etiqueta o commit (solo para pruebas)'
+        default: origin/main
+
+concurrency:
+  group: despliegue
+  cancel-in-progress: false
+
+jobs:
+  pruebas:
+    uses: ./.github/workflows/ci.yml
+
+  desplegar:
+    needs: pruebas
+    runs-on: ubuntu-24.04
+    environment: ${{ github.event.inputs.destino == 'produccion' && 'produccion' || 'pruebas' }}
+    steps:
+      - name: Conectar y desplegar
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USUARIO: ${{ secrets.SSH_USUARIO }}
+          SSH_CLAVE: ${{ secrets.SSH_CLAVE }}
+          SSH_HOSTS: ${{ secrets.SSH_HOSTS }}
+          SSH_PUERTO: ${{ secrets.SSH_PUERTO || '22' }}
+          DESTINO: ${{ github.event.inputs.destino || 'pruebas' }}
+          REF: ${{ github.event.inputs.ref || github.sha }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_CLAVE" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_HOSTS" > ~/.ssh/known_hosts
+          if [ "$DESTINO" = "produccion" ]; then ORDEN="./despliegue/scripts/desplegar.sh produccion"; else ORDEN="./despliegue/scripts/desplegar.sh pruebas $REF"; fi
+          ssh -p "$SSH_PUERTO" "$SSH_USUARIO@$SSH_HOST" "cd /opt/qsi && git fetch --all --prune && git checkout --force --detach origin/main && $ORDEN"

@@ -1,0 +1,20 @@
+{
+  "name": "quiero-ser-ingeniero",
+  "version": "2.0.0",
+  "private": true,
+  "description": "¡Quiero ser Ingeniero! - asistente para el proyecto y el borrador de tesis (UNDC). Versión 1 en Google Apps Script y versión 2 en servidor propio, con el mismo código.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "construir": "python3 tools/build.py",
+    "iniciar": "python3 tools/build.py && node servidor/principal.js",
+    "prueba": "python3 tools/build.py && node test/servidor.js && node test/informe.js && node servidor/test/runtime.js",
+    "prueba:ui": "node test/pagina.js && node test/ui.js && node test/v15_ui.js && node test/v16_ui.js && node test/tablero_ui.js && node test/humanizar_ui.js && node servidor/test/navegador.js",
+    "herramientas": "node servidor/herramientas.js"
+  },
+  "devDependencies": {
+    "playwright": "1.49.1"
+  }
+}

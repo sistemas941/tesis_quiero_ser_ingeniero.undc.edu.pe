@@ -1,0 +1,30 @@
+/* Cuenta lecturas de pestañas (getDataRange) en flujos típicos. Uso: node test/rendimiento.js ruta/Codigo.gs */
+const fs = require('fs'), path = require('path'), vm = require('vm');
+const R = path.resolve(__dirname, '..');
+const ctx = vm.createContext({ console }); ctx.globalThis = ctx;
+ctx.__hojaModo = { formato: true, apostrofo: true }; ctx.__filasIniciales = 95;
+const cargar = f => vm.runInContext(fs.readFileSync(f, 'utf8'), ctx, { filename: f });
+cargar(path.join(R, 'test/mock.js')); cargar(path.join(R, 'test/demo.js')); cargar(process.argv[2] || path.join(R, 'dist/Codigo.gs'));
+const api = (n, t, a) => { const r = vm.runInContext('api', ctx)(n, t, JSON.parse(JSON.stringify(a || {}))); if (!r.ok) throw new Error(n + ': ' + r.mensaje); return r.data; };
+vm.runInContext('instalar()', ctx);
+const libro = Object.values(ctx.__mock.libros)[0], hoja = n => libro.getSheetByName(n).datos;
+const adm = hoja('Usuarios')[1], CL = 'Clave2026demo';
+let tA = api('ingresar', '', { correo: adm[0], contrasena: adm[3] }).token; api('cambiarClave', tA, { actual: adm[3], nueva: CL });
+const clave = hoja('Config').find(f => f[0] === 'CLAVE_REGISTRO')[1];
+api('adminUsuario', tA, { correo: 'ase@undc.edu.pe', nombre: 'Asesor, Demo', rol: 'asesor' });
+const ini = hoja('Usuarios').find(f => f[0] === 'ase@undc.edu.pe')[3];
+let tS = api('ingresar', '', { correo: 'ase@undc.edu.pe', contrasena: ini }).token; api('cambiarClave', tS, { actual: ini, nueva: CL });
+vm.runInContext('ponerConfig_("ASESOR_POR_DEFECTO", "ase@undc.edu.pe")', ctx);
+const toks = [];
+for (let i = 0; i < 12; i++) { const c = 'e' + i + '@undc.edu.pe'; api('registrar', '', { correo: c, nombre: 'Estudiante Prueba ' + i, clave, contrasena: CL }); const t = api('ingresar', '', { correo: c, contrasena: CL }).token; toks.push(t); api('guardar', t, { valores: ctx.__DEMO.valores[0] }); api('guardar', t, { valores: ctx.__DEMO.valores[1] || {} }); }
+const medir = (nombre, f) => { ctx.__lecturas = 0; ctx.__celdas = 0; const t0 = Date.now(); f(); console.log(nombre.padEnd(46) + String(ctx.__lecturas).padStart(5) + ' lecturas  ' + String(ctx.__celdas).padStart(7) + ' filas  ' + (Date.now() - t0) + ' ms'); };
+const t0 = toks[0];
+medir('Estudiante entra (yo + estado)', () => { api('yo', t0, {}); api('estado', t0); });
+medir('Estudiante entra otra vez', () => { api('yo', t0, {}); api('estado', t0); });
+medir('Estudiante guarda y ve su pagina', () => api('guardar', t0, { valores: { tema: 'Tema nuevo de prueba para medir ' + Date.now() }, vista: true }));
+medir('Estudiante abre Ver mi tesis', () => api('vista', t0));
+medir('Estudiante abre Ver mi tesis otra vez', () => api('vista', t0));
+medir('Asesor abre Estudiantes (12)', () => api('panel', tS));
+medir('Asesor abre Estudiantes otra vez', () => api('panel', tS));
+medir('Admin: tablero recalculado', () => api('tablero', tA, { forzar: true }));
+medir('Admin: tablero recalculado otra vez', () => api('tablero', tA, { forzar: true }));

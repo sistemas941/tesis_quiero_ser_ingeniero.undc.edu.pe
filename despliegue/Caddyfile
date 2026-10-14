@@ -1,0 +1,37 @@
+# Caddy obtiene y renueva solo los certificados HTTPS de los dominios de .env.
+{
+	email {$CORREO_TLS}
+}
+
+{$DOMINIO} {
+	encode zstd gzip
+	request_body {
+		max_size 32MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy app:3000 {
+		# Las consultas a la IA pueden tardar
+		transport http {
+			read_timeout 6m
+		}
+	}
+}
+
+# Entorno de pruebas: protegido con usuario y clave (PRUEBAS_USUARIO y PRUEBAS_HASH en .env)
+{$DOMINIO_PRUEBAS:pruebas.localhost} {
+	encode zstd gzip
+	basic_auth {
+		{$PRUEBAS_USUARIO:pruebas} {$PRUEBAS_HASH}
+	}
+	request_body {
+		max_size 32MB
+	}
+	reverse_proxy app-pruebas:3000 {
+		transport http {
+			read_timeout 6m
+		}
+	}
+}

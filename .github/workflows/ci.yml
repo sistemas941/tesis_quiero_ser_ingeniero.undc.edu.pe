@@ -1,0 +1,67 @@
+# Pruebas automáticas: corren en cada cambio. Si algo falla, el despliegue no avanza.
+name: Pruebas
+
+on:
+  push:
+    branches-ignore: [main]   # main se prueba dentro de «Desplegar»
+  pull_request:
+  workflow_call:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Construir dist/ (también valida ASCII, plantillas y funciones repetidas)
+        run: python3 tools/build.py
+      - name: LibreOffice y Playwright
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-writer-nogui fonts-liberation poppler-utils
+          npm install --no-save playwright@1.49.1
+          npx playwright install --with-deps chromium
+      - name: Lógica de la aplicación (simulador de Apps Script)
+        run: |
+          node test/servidor.js
+          node test/informe.js
+      - name: Versión 2 de punta a punta (SQLite, Word, PDF, migración)
+        run: node servidor/test/runtime.js
+      - name: Interfaz en el navegador
+        run: |
+          node test/pagina.js
+          node test/ui.js
+          node test/v15_ui.js
+          node test/v16_ui.js
+          node test/tablero_ui.js
+          node test/humanizar_ui.js
+          node servidor/test/navegador.js
+      - name: Capturas (si algo falla)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas
+          path: |
+            test/salida/*.png
+            servidor/test/salida/*.png
+          if-no-files-found: ignore
+
+  imagen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construir la imagen Docker (x86_64)
+        run: docker build --build-arg VERSION=${GITHUB_SHA::7} -t qsi:ci .
+      - name: La imagen arranca, instala y responde
+        run: |
+          mkdir -p /tmp/datos && chmod 777 /tmp/datos
+          docker run --rm -e ADMIN_CORREO=admin@ejemplo.pe -v /tmp/datos:/datos qsi:ci node servidor/herramientas.js instalar | grep -q "Instalación completa"
+          docker run -d --name qsi -p 3000:3000 -v /tmp/datos:/datos qsi:ci
+          for i in $(seq 1 30); do curl -fs localhost:3000/salud && break; sleep 2; done
+          curl -fs localhost:3000/ | grep -q "QSI_SERVIDOR"
+          docker logs qsi

@@ -1,0 +1,15 @@
+.git
+.github
+datos
+datos-*
+respaldos
+padron
+paquete
+guia
+test
+servidor/test
+dist
+node_modules
+*.zip
+.env
+.env.*
