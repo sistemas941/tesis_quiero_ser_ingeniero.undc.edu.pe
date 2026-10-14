@@ -1,0 +1,22 @@
+name: qsi-apache
+services:
+  app:
+    image: ${QSI_IMAGEN:?Defina QSI_IMAGEN}
+    restart: unless-stopped
+    user: "${UID_APP:?}:${GID_APP:?}"
+    env_file:
+      - ${QSI_RAIZ:?}/.env
+    environment:
+      DATOS: /datos
+      PUERTO: "3000"
+      URL_PUBLICA: https://test.tesisherrera.undc.edu.pe
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ${QSI_RAIZ:?}/datos:/datos
+    mem_limit: 2g
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"

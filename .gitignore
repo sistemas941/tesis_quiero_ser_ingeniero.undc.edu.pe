@@ -18,3 +18,7 @@ test/salida/
 servidor/test/salida/
 node_modules/
 *.zip
+*.tar.gz
+.version-desplegada
+.despliegue.lock
+releases/

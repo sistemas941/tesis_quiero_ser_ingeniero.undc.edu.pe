@@ -19,6 +19,13 @@ jobs:
         with: { python-version: '3.12' }
       - name: Construir dist/ (también valida ASCII, plantillas y funciones repetidas)
         run: python3 tools/build.py
+      - name: Validar despliegue Apache
+        run: |
+          bash -n despliegue/scripts/desplegar-apache.sh
+          mkdir -p /tmp/qsi-validacion
+          touch /tmp/qsi-validacion/.env
+          QSI_RAIZ=/tmp/qsi-validacion QSI_IMAGEN=qsi:validacion UID_APP=1001 GID_APP=1001 \
+            docker compose --env-file /tmp/qsi-validacion/.env -f despliegue/compose.apache.yml config --quiet
       - name: LibreOffice y Playwright
         run: |
           sudo apt-get update
@@ -27,6 +34,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Lógica de la aplicación (simulador de Apps Script)
         run: |
+          mkdir -p test/salida
           node test/servidor.js
           node test/informe.js
       - name: Versión 2 de punta a punta (SQLite, Word, PDF, migración)
